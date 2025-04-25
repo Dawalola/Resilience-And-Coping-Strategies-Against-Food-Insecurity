@@ -3,6 +3,7 @@
 **Household Resilience and Coping Strategies Against Food Insecurity**
 ****Description**
 This dashboard visualizes the relationship between social capital and household food insecurity based on data from the USAID-funded Titukulane Resilience Food Security Activity (RFSA) in Malawi. It includes interactive visualizations showing social capital scores across food security categories and the results of regression models examining associations with coping strategies.
+Raw data files are excluded due to confidentiality.
 
 **Published Dashboard**
 View the Dashboard Here : https://dawalola.github.io/Resilience-And-Coping-Strategies-Against-Food-Insecurity/#visualizations
