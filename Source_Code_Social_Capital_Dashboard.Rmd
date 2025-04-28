@@ -1,0 +1,140 @@
+---
+title: "Household Resilience and Coping Strategies Against Food Insecurity"
+author: "Dawa Oluya"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    theme: cosmo
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(pacman)
+p_load(flexdashboard, tidyverse, dplyr, ggplot2, plotly, shiny, readr, ggpubr)
+```
+
+# About
+
+<h2>Understanding Household Coping and Social Capital in Malawi</h2>
+
+<h3>Insights from the Titukulane Resilience Food Security Activity</h3>
+
+| Topic | Details |
+|------|-----------------------------------------------|
+| **Core Themes** | Social capital, household resilience, food insecurity |
+| **Geography** | Malawi: Zomba and Mangochi districts |
+| **Program** | USAID-funded Titukulane RFSA implemented by CARE |
+| **Study Design** | Longitudinal secondary data analysis, 2021 household surveys |
+| **Sample** | 5,001 households |
+| **Exposure** | Bonding (within-village) & Bridging (external) social capital |
+| **Outcomes** | Reduced Coping Strategy Index (rCSI), Household Hunger Scale (HHS) |
+| **Method** | Multivariable ordinal logistic regression, adjusted for covariates |
+| **Insight** | No significant association between social capital scores and food insecurity |
+| **Learn More** | <https://www.care.org/> |
+| **Git hub Repository** | <https://github.com/Dawalola/Resilience-And-Coping-Strategies-Against-Food-Insecurity/> |
+
+# Methodology
+For this relationship between social capital and coping strategies in Titukulane, a multivariable linear regression will be employed to assess the association between social capital indicators and household coping strategy outcomes, specifically the Reduced Coping Strategy Index (rCSI) and Livelihood Coping Strategy Index (LCSI). Social capital will be measured using who they able to receive help from or provide help to inside or outside the village (relatives, groups, traditional leaders) categorized as bonding, bridging, and linking capital.
+**NOTE**:Raw data files are excluded due to confidentiality.
+
+```{r data-load}
+df <- read_csv("Capstone/Titukulane2023.csv")
+
+# Calculate bonding, bridging, and total social capital scores
+df$bridging_score <- rowSums(df[, c("q88_bridging_1_1", "q88_bridging_1_2", "q88_bridging_1_3", 
+                                    "q88_bridging_1_4", "q88_bridging_1_5",
+                                    "q89_bridging_2_1", "q89_bridging_2_2", "q89_bridging_2_3", 
+                                    "q89_bridging_2_4", "q89_bridging_2_5")], na.rm = TRUE)
+
+
+df$bonding_score <- rowSums(df[, c("q90_bonding_1_1", "q90_bonding_1_2", "q90_bonding_1_3", 
+                                   "q90_bonding_1_4", "q90_bonding_1_5",
+                                   "q91_bonding_2_1", "q91_bonding_2_2", "q91_bonding_2_3", 
+                                   "q91_bonding_2_4", "q91_bonding_2_5")], na.rm = TRUE)
+
+# Social Capital Score
+df$Social_Capital_Score <- df$bonding_score + df$bridging_score
+
+# Subset for analysis
+df_subset_scores <- df %>%
+  filter(bridging_score > 0 | bonding_score > 0) %>%
+  mutate(
+    rCSI_cat = cut(rCSI_score, breaks = c(0, 3, 18, 43),
+                   labels = c("Food secure", "Stressed", "Crisis"), ordered_result = TRUE),
+    HHScat = cut(HHSscore, breaks = c(0, 2, 4, 6),
+                 labels = c("Food secure", "Moderate", "Severe"), ordered_result = TRUE),
+    Food_Security = ifelse(rCSI_cat == "Food secure", "Secure", "Insecure")
+  )
+```
+
+
+# Dashboard Overview {.tabset}
+
+## Overview
+
+This dashboard presents interactive visualizations exploring how bonding and bridging social capital relate to household coping and food insecurity outcomes in southern Malawi.
+
+Key points:
+
+- Social capital was measured via summed scores for within-village (bonding) and external (bridging) networks.
+- Food insecurity outcomes were assessed using rCSI (coping severity) and HHS (hunger levels).
+- Multivariable ordinal logistic regression models were used.
+- Household size and respondent age were included as covariates.
+- No strong evidence linking social capital directly to food security outcomes.
+
+---
+
+# Visualizations {.tabset}
+
+## Social Capital Score by Food Security Status
+
+```{r boxplot}
+plot_data <- df_subset_scores %>%
+  mutate(Food_Security = factor(Food_Security, levels = c("Secure", "Insecure"))) %>%
+  filter(!is.na(Food_Security))  # Exclude NAs
+
+
+socialCapitalBoxplot <- ggplot(plot_data, aes(x = Food_Security, y = Social_Capital_Score, fill = Food_Security)) +
+  geom_boxplot() +
+  labs(
+    title = "Social Capital Score by Food Security Status",
+    x = "Food Security Category",
+    y = "Total Social Capital Score"
+  ) +
+  theme_minimal()
+
+ggplotly(socialCapitalBoxplot, tooltip = c("x", "y"))
+```
+
+**Key Takeaways:**
+- Slightly higher social capital among food secure households.
+- Difference not statistically significant.
+
+
+## Association Between Social Capital and Food Insecurity
+
+```{r forest-plot}
+forest_data <- data.frame(
+  Variable = c("Bonding Score (HHS)", "Bridging Score (HHS)", "Bonding Score (rCSI)", "Bridging Score (rCSI)"),
+  OR = c(0.8, 1.1, 1.0, 1.0),
+  Lower = c(0.6, 0.8, 0.8, 0.8),
+  Upper = c(1.0, 1.4, 1.2, 1.2)
+)
+
+forest_plot <- ggplot(forest_data, aes(x = OR, y = Variable)) +
+  geom_point(size = 3) +
+  geom_errorbarh(aes(xmin = Lower, xmax = Upper), height = 0.2) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
+  scale_x_continuous(name = "Odds Ratio (OR)", limits = c(0.4, 1.6)) +
+  labs(title = "Odds for Social Capital and Food Insecurity") +
+  theme_minimal()
+
+# Make interactive
+ggplotly(forest_plot, tooltip = c("x", "y"))
+```
+
+**Key Takeaways:**
+- No significant associations between social capital (bonding or bridging) and food insecurity outcomes.
+- Highlights the need for broader structural interventions beyond social capital alone.
